@@ -1,0 +1,62 @@
+---
+title: "Kidney Disease Analysis"
+output: 
+  html_document:
+    theme: flatly
+    code_folding: hide
+    toc: true
+    toc_depth: 3
+    toc_float: true
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r include=FALSE}
+# Load necessary libraries
+library(shiny)
+library(ggplot2)
+library(dplyr)
+library(pheatmap)
+library(tidyverse)
+library(ggpubr)
+```
+
+```{r data-loading, include=FALSE}
+# Import data
+data1 <- read.csv("data/kidney_disease.csv")
+data2 <- read.csv("data/Chronic_Kidney_Disease.csv")
+
+# Data cleaning and preparation for data1
+colnames(data1) <- c('id', 'age', 'blood_pressure', 'specific_gravity', 'albumin', 'sugar', 'red_blood_cells', 'pus_cell',
+              'pus_cell_clumps', 'bacteria', 'blood_glucose_random', 'blood_urea', 'serum_creatinine', 'sodium',
+              'potassium', 'haemoglobin', 'packed_cell_volume', 'white_blood_cell_count', 'red_blood_cell_count',
+              'hypertension', 'diabetes_mellitus', 'coronary_artery_disease', 'appetite', 'peda_edema',
+              'anaemia', 'class')
+
+# Replace 0 with NA for serum_creatinine and albumin
+data1$albumin[data1$albumin == 0] <- NA
+data1$serum_creatine[data1$serum_creatinine == 0] <- NA
+
+# Clean data
+data1$coronary_artery_disease <- trimws(data1$coronary_artery_disease)
+data1$diabetes_mellitus <- trimws(data1$diabetes_mellitus)
+data1$coronary_artery_disease[data1$coronary_artery_disease == ""] <- NA
+
+# Filter out rows with NA values
+data1 <- filter(data1, !is.na(coronary_artery_disease) & !is.na(serum_creatinine) & !is.na(albumin))
+
+# Create derived columns
+data1$albumin_to_creatinine_ratio <- data1$serum_creatinine / data1$albumin
+data1$coronary_artery_disease_numerical <- ifelse(data1$coronary_artery_disease == "yes", 1, 0)
+
+# Data preparation for data2
+data2$BMI_category <- cut(data2$BMI,
+                          breaks = c(-Inf, 18.5, 24.9, 29.9, Inf),
+                          labels = c("Underweight", "Normal", "Overweight", "Obese"))
+
+# Convert the UrinaryTractInfections column into a factor with custom labels
+data2$UrinaryTractInfections_Status <- factor(data2$UrinaryTractInfections, labels = c("No Infection", "Yes Infection"))
+```
