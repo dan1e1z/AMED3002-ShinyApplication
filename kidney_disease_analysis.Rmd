@@ -11,18 +11,22 @@ runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```
 
 ```{r include=FALSE}
 # Load necessary libraries
 library(shiny)
+library(shinythemes)
 library(ggplot2)
 library(dplyr)
 library(pheatmap)
 library(tidyverse)
 library(ggpubr)
 library(knitr)
+library(knitr)
+library(kableExtra)
+library(bslib)
 ```
 
 ```{r data-loading, include=FALSE}
@@ -61,75 +65,80 @@ data2$BMI_category <- cut(data2$BMI,
 # Convert the UrinaryTractInfections column into a factor with custom labels
 data2$UrinaryTractInfections_Status <- factor(data2$UrinaryTractInfections, labels = c("No Infection", "Yes Infection"))
 ```
-# Summary
-# Introduction
-# Identify Cofounders
 
 ```{r}
-# Perform Chi-Square test for Hypertension vs Coronary Artery Disease
-hypertension_test <- chisq.test(table(data1$hypertension, data1$coronary_artery_disease))
+create_identify_cofounders <- function() {
+  
+  # Perform Chi-Square test for Hypertension vs Coronary Artery Disease
+  hypertension_test <- chisq.test(table(data1$hypertension, data1$coronary_artery_disease))
+  
+  # Perform Chi-Square test for Diabetes vs Coronary Artery Disease
+  diabetes_test <- chisq.test(table(data1$diabetes_mellitus, data1$coronary_artery_disease))
+  
+  dt1 <- data.frame(
+      Statistic = c("Chi-square Statistic", "Degrees of Freedom", "P-value"),
+      Value = c(round(hypertension_test$statistic, 3), 
+                hypertension_test$parameter, 
+                round(hypertension_test$p.value, 3))
+  )
+  
+  dt2 <- data.frame(
+      Statistic = c("Chi-square Statistic", "Degrees of Freedom", "P-value"),
+      Value = c(round(diabetes_test$statistic, 3), 
+                diabetes_test$parameter, 
+                round(diabetes_test$p.value, 3))
+  )
+  
+  hypertension_chi_table = dt1 %>% kbl(caption = "Hypertension vs Coronary Artery Disease") %>%   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+  diabetes_chi_table = dt2 %>% kbl(caption = "Diabetes Mellitus vs Coronary Artery Disease") %>%   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+  
+  return (
+    fluidRow(
+      column(6, HTML(hypertension_chi_table)),
+      column(6, HTML(diabetes_chi_table))
+    )
+  )
+}
+```
 
-# Perform Chi-Square test for Diabetes vs Coronary Artery Disease
-diabetes_test <- chisq.test(table(data1$diabetes_mellitus, data1$coronary_artery_disease))
-class(hypertension_test)
-
-
-dt1 <- data.frame(
-    Statistic = c("Chi-square Statistic", "Degrees of Freedom", "P-value"),
-    Value = c(round(hypertension_test$statistic, 3), 
-              hypertension_test$parameter, 
-              round(hypertension_test$p.value, 3))
-)
-
-dt2 <- data.frame(
-    Statistic = c("Chi-square Statistic", "Degrees of Freedom", "P-value"),
-    Value = c(round(diabetes_test$statistic, 3), 
-              diabetes_test$parameter, 
-              round(diabetes_test$p.value, 3))
-)
-
-hypertension_chi_table = dt1 %>% kbl() %>%   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
-diabetes_chi_table = dt2 %>% kbl() %>%   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
-
-
+```{r}
+create_remove_cofounder_sidebar <- function() {
+  return (
+      layout_columns(
+        card("Column 1"),
+        card("Column 2"),
+        card("Column 3")
+    )
+  )
+}
 
 ```
 
 ```{r}
-# Perform Chi-Square test for Hypertension vs Coronary Artery Disease
-hypertension_test <- chisq.test(table(data1$hypertension, data1$coronary_artery_disease))
-
-# Perform Chi-Square test for Diabetes vs Coronary Artery Disease
-diabetes_test <- chisq.test(table(data1$diabetes_mellitus, data1$coronary_artery_disease))
-class(hypertension_test)
-
-
-dt1 <- data.frame(
-    Statistic = c("Chi-square Statistic", "Degrees of Freedom", "P-value"),
-    Value = c(round(hypertension_test$statistic, 3), 
-              hypertension_test$parameter, 
-              round(hypertension_test$p.value, 3))
+# UI
+ui <- fluidPage(
+  theme = shinytheme("cosmo"),
+    mainPanel(
+      h1("Summary"),
+      h1("Introduction"),
+      p("This app explores data related to kidney disease, including analysis on cofounders such as Hypertension and Diabetes."),
+      h1("Identify Cofounders"),
+      uiOutput("Identify_Cofounders"),
+      h1("Remove Cofounders"),
+      uiOutput("Remove_Cofounder_Sidebar")
+  )
 )
-
-dt2 <- data.frame(
-    Statistic = c("Chi-square Statistic", "Degrees of Freedom", "P-value"),
-    Value = c(round(diabetes_test$statistic, 3), 
-              diabetes_test$parameter, 
-              round(diabetes_test$p.value, 3))
-)
-
-hypertension_chi_table = dt1 %>% kbl(caption = "Hypertension vs Coronary Artery Disease") %>%   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
-diabetes_chi_table = dt2 %>% kbl(caption = "Diabetes Mellitus vs Coronary Artery Disease") %>%   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
-
-# Inline HTML to arrange the tables side-by-side using CSS
-html_code <- paste0(
-  '<div style="display: flex; justify-content: space-between;">',
-  '<div style="width: 48%;">', hypertension_chi_table, '</div>',
-  '<div style="width: 48%;">', diabetes_chi_table, '</div>',
-  '</div>'
-)
-
-# Output the HTML code directly
-HTML(html_code)
 ```
 
+```{r}
+# Server
+server <- function(input, output) {
+  output$Identify_Cofounders <- renderUI({
+  create_identify_cofounders()
+  })
+  output$Remove_Cofounder_Sidebar <- renderUI({
+  create_remove_cofounder_sidebar()
+  })
+}
+shinyApp(ui, server)
+```
