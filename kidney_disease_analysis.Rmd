@@ -22,6 +22,7 @@ library(dplyr)
 library(pheatmap)
 library(tidyverse)
 library(ggpubr)
+library(knitr)
 ```
 
 ```{r data-loading, include=FALSE}
@@ -60,3 +61,75 @@ data2$BMI_category <- cut(data2$BMI,
 # Convert the UrinaryTractInfections column into a factor with custom labels
 data2$UrinaryTractInfections_Status <- factor(data2$UrinaryTractInfections, labels = c("No Infection", "Yes Infection"))
 ```
+# Summary
+# Introduction
+# Identify Cofounders
+
+```{r}
+# Perform Chi-Square test for Hypertension vs Coronary Artery Disease
+hypertension_test <- chisq.test(table(data1$hypertension, data1$coronary_artery_disease))
+
+# Perform Chi-Square test for Diabetes vs Coronary Artery Disease
+diabetes_test <- chisq.test(table(data1$diabetes_mellitus, data1$coronary_artery_disease))
+class(hypertension_test)
+
+
+dt1 <- data.frame(
+    Statistic = c("Chi-square Statistic", "Degrees of Freedom", "P-value"),
+    Value = c(round(hypertension_test$statistic, 3), 
+              hypertension_test$parameter, 
+              round(hypertension_test$p.value, 3))
+)
+
+dt2 <- data.frame(
+    Statistic = c("Chi-square Statistic", "Degrees of Freedom", "P-value"),
+    Value = c(round(diabetes_test$statistic, 3), 
+              diabetes_test$parameter, 
+              round(diabetes_test$p.value, 3))
+)
+
+hypertension_chi_table = dt1 %>% kbl() %>%   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+diabetes_chi_table = dt2 %>% kbl() %>%   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+
+
+```
+
+```{r}
+# Perform Chi-Square test for Hypertension vs Coronary Artery Disease
+hypertension_test <- chisq.test(table(data1$hypertension, data1$coronary_artery_disease))
+
+# Perform Chi-Square test for Diabetes vs Coronary Artery Disease
+diabetes_test <- chisq.test(table(data1$diabetes_mellitus, data1$coronary_artery_disease))
+class(hypertension_test)
+
+
+dt1 <- data.frame(
+    Statistic = c("Chi-square Statistic", "Degrees of Freedom", "P-value"),
+    Value = c(round(hypertension_test$statistic, 3), 
+              hypertension_test$parameter, 
+              round(hypertension_test$p.value, 3))
+)
+
+dt2 <- data.frame(
+    Statistic = c("Chi-square Statistic", "Degrees of Freedom", "P-value"),
+    Value = c(round(diabetes_test$statistic, 3), 
+              diabetes_test$parameter, 
+              round(diabetes_test$p.value, 3))
+)
+
+hypertension_chi_table = dt1 %>% kbl(caption = "Hypertension vs Coronary Artery Disease") %>%   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+diabetes_chi_table = dt2 %>% kbl(caption = "Diabetes Mellitus vs Coronary Artery Disease") %>%   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+# Inline HTML to arrange the tables side-by-side using CSS
+html_code <- paste0(
+  '<div style="display: flex; justify-content: space-between;">',
+  '<div style="width: 48%;">', hypertension_chi_table, '</div>',
+  '<div style="width: 48%;">', diabetes_chi_table, '</div>',
+  '</div>'
+)
+
+# Output the HTML code directly
+HTML(html_code)
+```
+
