@@ -34,15 +34,17 @@ load_and_clean_data <- function() {
                        'anaemia', 'class')
   
   # Replace 0 with NA for serum_creatinine and albumin
-  data1$serum_creatinine[data1$serum_creatinine == 0] <- NA
-  data1$albumin[data1$albumin == 0] <- NA
+  # data1$serum_creatinine[data1$serum_creatinine == 0] <- NA
+  # data1$albumin[data1$albumin == 0] <- NA
   
 
   
   # Clean data
   data1$coronary_artery_disease <- trimws(data1$coronary_artery_disease)
+  data1$hypertension <- trimws(data1$hypertension)
   data1$diabetes_mellitus <- trimws(data1$diabetes_mellitus)
   data1$coronary_artery_disease[data1$coronary_artery_disease == ""] <- NA
+  data1$hypertension[data1$hypertension == ""] <- NA
   
   # Filter out rows with NA values
   data1 <- filter(data1, !is.na(coronary_artery_disease) & !is.na(serum_creatinine) & !is.na(albumin))
@@ -70,7 +72,7 @@ load_and_clean_data <- function() {
 create_chi_square_tables <- function(data1) {
   # Perform Chi-Square test for Hypertension vs Coronary Artery Disease
   hypertension_test <- chisq.test(table(data1$hypertension, data1$coronary_artery_disease))
-  
+
   # Perform Chi-Square test for Diabetes vs Coronary Artery Disease
   diabetes_test <- chisq.test(table(data1$diabetes_mellitus, data1$coronary_artery_disease))
   
@@ -103,6 +105,26 @@ create_original_graph <- function(data1, plot_type = "box") {
   # Define color palette
   color_palette <- c("#4E79A7", "#F28E2B")
   
+  if (plot_type == "logistic") {
+    logit_model <- glm(coronary_artery_disease_numerical ~ serum_creatinine, data = data1, family = binomial)
+    
+    
+    logit_plot <- ggplot(data1, aes(x = serum_creatinine, y = coronary_artery_disease_numerical, color = factor(coronary_artery_disease_numerical))) + 
+      geom_point(alpha = 0.6, size = 2) +
+      stat_smooth(method = "glm", se = FALSE, method.args = list(family = binomial()), color = "#780f51", size = 1.2) +
+      scale_color_manual(values = c("#e76518", "#20446e")) + 
+      scale_y_continuous(breaks = c(0, 1), labels = c("No CAD", "Yes CAD")) +
+      labs(
+        x = "Serum Creatinine (mg/dL)",
+        y = "Probability of Coronary Artery Disease"
+      ) +
+      theme_minimal() +
+      theme(legend.position = "none")
+    
+    return(plotly::ggplotly(logit_plot))
+    
+  }
+  
   # Create base plot
   base_plot <- ggplot(data1, aes(x = coronary_artery_disease, y = serum_creatinine, 
                                  fill = coronary_artery_disease, color = coronary_artery_disease)) +
@@ -131,7 +153,7 @@ create_original_graph <- function(data1, plot_type = "box") {
   return(plotly::ggplotly(final_plot))
 }
 
-# Function to create the adjusted graph
+# Function to create the adjusted graph or logistic regression
 create_adjusted_graph <- function(data1, remove_hypertension = FALSE, remove_diabetes = FALSE, plot_type = "box") {
   plot_data <- data1  # Copy data for modifications
   
@@ -154,7 +176,29 @@ create_adjusted_graph <- function(data1, remove_hypertension = FALSE, remove_dia
     adj_text <- "Unadjusted"
   }
   
-  # Create base plot
+  # Check if we need to run a logistic regression
+  if (plot_type == "logistic") {
+    logit_formula <- as.formula(paste("coronary_artery_disease_numerical ~ serum_creatinine_adjusted", 
+                                      if (length(confounders) > 0) paste("+", paste(confounders, collapse = " + ")) else ""))
+    logit_model <- glm(logit_formula, data = plot_data, family = binomial)
+    
+    logit_plot <- ggplot(plot_data, aes(x = serum_creatinine_adjusted, y = coronary_artery_disease_numerical)) + 
+      geom_point(aes(colour = factor(coronary_artery_disease_numerical)), alpha = 0.6, size = 2) + 
+      stat_smooth(method = "glm", se = FALSE, method.args = list(family = binomial()), colour = "#780f51", size = 1.2) +  
+      scale_color_manual(values = c("#e76518", "#20446e")) + 
+      scale_y_continuous(breaks = c(0, 1), labels = c("No CAD", "Yes CAD")) + 
+      labs(
+        x = "Adjusted Serum Creatinine (mg/dL)",
+        y = "Probability of Coronary Artery Disease"
+      ) +
+      theme_minimal() +
+      theme(legend.position = "none") 
+    
+    
+    return(plotly::ggplotly(logit_plot))
+  }
+  
+  # Create base plot (only for "box" or "violin")
   base_plot <- ggplot(plot_data, aes(x = coronary_artery_disease, y = serum_creatinine_adjusted, 
                                      fill = coronary_artery_disease, color = coronary_artery_disease)) +
     labs(
@@ -183,6 +227,8 @@ create_adjusted_graph <- function(data1, remove_hypertension = FALSE, remove_dia
   # Convert to interactive plot
   return(plotly::ggplotly(final_plot))
 }
+
+
 
 # Function to create BMI vs Serum Creatinine plot
 create_bmi_creatinine_smoking_plot <- function(data2) {
@@ -328,8 +374,8 @@ run_kidney_disease_app <- function() {
       ),
       
       # Dataset 1 Analysis Panel
-      tabPanel("Dataset 1 Analysis",
-               h2("Dataset 1 Analysis"),
+      tabPanel("Dataset 1 Results",
+               h2("Dataset 1 Results"),
                h3("Exploring Data Relationship"),
                fluidRow(
                  column(2, 
@@ -358,14 +404,14 @@ run_kidney_disease_app <- function() {
                ),
                h3("Identifying Confounders"),
                fluidRow(
-                 column(2, 
+                 column(6, 
                         p("This section explores potential confounders such as hypertension and diabetes, and their relationship with coronary artery disease.")
                  ),
-                 column(5, 
+                 column(3, 
                         h4("Hypertension vs Coronary Artery Disease"),
                         tableOutput("hypertension_table"),
                  ),
-                 column(5, 
+                 column(3, 
                         h4("Diabetes vs Coronary Artery Disease"),
                         tableOutput("diabetes_table")
                  )
@@ -379,7 +425,8 @@ run_kidney_disease_app <- function() {
                           checkboxInput("remove_diabetes", "Remove Diabetes", FALSE),
                           selectInput("graph_type", "Graph Type",
                                       choices = c("Violin Plot" = "violin", 
-                                                  "Box Plot" = "box"))
+                                                  "Box Plot" = "box",
+                                                  "Logistic Regression" = "logistic"))
                         )
                  ),
                  fluidRow(12,
@@ -394,18 +441,20 @@ run_kidney_disease_app <- function() {
       ),
       
       # Dataset 2 Analysis Panel
-      tabPanel("Dataset 2 Analysis",
-               h2("Dataset 2 Analysis"),
+      tabPanel("Dataset 2 Results",
+               h2("Dataset 2 Results"),
                fluidRow(
                  column(6, 
                         p("This section explores predictivity of Serum Creatinine against smoking and BMI, both known risk factors of CAD"),
                  ),
-                 column(6, 
+                 column(3, 
                         h4("Statistical Tests for Smoking and Serum Creatinine"),
                         tableOutput("smoking_ttest_table"),
+                 ),
+                 column(3, 
                         h4("Statistical Tests for BMI Categories and Serum Creatinine"),
                         tableOutput("bmi_anova_table"),
-                 ),
+                      ),
                ),
                h3("Serum Creatinine vs BMI and Smoking"),
                plotlyOutput("bmi_creatinine_smoking_plot"),
