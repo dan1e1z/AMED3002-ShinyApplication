@@ -14,9 +14,6 @@ library(kableExtra)
 library(bslib)
 library(plotly)
 
-# Define the null-coalescing operator
-`%||%` <- function(x, y) if (is.null(x)) y else x
-
 # --------------------------------------------
 # Data Loading and Cleaning Functions
 # --------------------------------------------
@@ -107,6 +104,7 @@ create_original_graph <- function(data1, plot_type = "box") {
   
   if (plot_type == "logistic") {
     logit_model <- glm(coronary_artery_disease_numerical ~ serum_creatinine, data = data1, family = binomial)
+    p_value <- summary(logit_model)$coefficients[2, 4]
     
     
     logit_plot <- ggplot(data1, aes(x = serum_creatinine, y = coronary_artery_disease_numerical, color = factor(coronary_artery_disease_numerical))) + 
@@ -118,10 +116,15 @@ create_original_graph <- function(data1, plot_type = "box") {
         x = "Serum Creatinine (mg/dL)",
         y = "Probability of Coronary Artery Disease"
       ) +
+      # Annotate the p-value manually
+      annotate("text", x = 20, y = 3.5, label = paste("p =", format(p_value, digits = 3)), color = "black", size = 5) +
+      # Optionally add the regression equation manually
+      annotate("text", x = 20, y = 4, label = paste("y =", round(coef(logit_model)[1], 3), 
+                                                    "+", round(coef(logit_model)[2], 3), "x"), color = "black", size = 5) +
       theme_minimal() +
       theme(legend.position = "none")
     
-    return(plotly::ggplotly(logit_plot))
+    return(logit_plot)
     
   }
   
@@ -150,7 +153,7 @@ create_original_graph <- function(data1, plot_type = "box") {
   final_plot <- final_plot + ggpubr::stat_compare_means(label.y = max(data1$serum_creatinine, na.rm = TRUE) * 1.1 )
   
   # Convert to interactive plot
-  return(plotly::ggplotly(final_plot))
+  return(final_plot)
 }
 
 # Function to create the adjusted graph or logistic regression
@@ -181,6 +184,7 @@ create_adjusted_graph <- function(data1, remove_hypertension = FALSE, remove_dia
     logit_formula <- as.formula(paste("coronary_artery_disease_numerical ~ serum_creatinine_adjusted", 
                                       if (length(confounders) > 0) paste("+", paste(confounders, collapse = " + ")) else ""))
     logit_model <- glm(logit_formula, data = plot_data, family = binomial)
+    p_value <- summary(logit_model)$coefficients[2, 4]
     
     logit_plot <- ggplot(plot_data, aes(x = serum_creatinine_adjusted, y = coronary_artery_disease_numerical)) + 
       geom_point(aes(colour = factor(coronary_artery_disease_numerical)), alpha = 0.6, size = 2) + 
@@ -191,11 +195,16 @@ create_adjusted_graph <- function(data1, remove_hypertension = FALSE, remove_dia
         x = "Adjusted Serum Creatinine (mg/dL)",
         y = "Probability of Coronary Artery Disease"
       ) +
+      # Annotate the p-value manually
+      annotate("text", x = 20, y = 3.5, label = paste("p =", format(p_value, digits = 3)), color = "black", size = 5) +
+      # Optionally add the regression equation manually
+      annotate("text", x = 20, y = 4, label = paste("y =", round(coef(logit_model)[1], 3), 
+                                                    "+", round(coef(logit_model)[2], 3), "x"), color = "black", size = 5) +
       theme_minimal() +
       theme(legend.position = "none") 
     
     
-    return(plotly::ggplotly(logit_plot))
+    return(logit_plot)
   }
   
   # Create base plot (only for "box" or "violin")
@@ -225,7 +234,7 @@ create_adjusted_graph <- function(data1, remove_hypertension = FALSE, remove_dia
   final_plot <- final_plot + ggpubr::stat_compare_means(label.y = max(plot_data$serum_creatinine_adjusted, na.rm = TRUE) * 1.1 )
   
   # Convert to interactive plot
-  return(plotly::ggplotly(final_plot))
+  return(final_plot)
 }
 
 
@@ -281,14 +290,15 @@ create_explore_relationship_graph <- function(data1) {
     labs(x = "Serum Creatinine (mgs/dl)",
          y = "Density",
          title = "Distribution of Serum Creatinine by Health Conditions",
-         fill = "Condition Status") +
+         fill = "Condition Status",
+         ) +
     theme_minimal(base_size = 12) +
     theme(
       legend.position = "bottom",
       strip.text = element_text(face = "bold", size = 10),
       plot.title = element_text(hjust = 0.5, face = "bold"),
       axis.title = element_text(face = "bold"),
-      legend.title = element_text(face = "bold")
+      legend.title = element_text(face = "bold"),
     ) +
     scale_fill_brewer(palette = "Set2") +
     scale_x_log10()  # Often useful for clinical values 
@@ -364,13 +374,14 @@ run_kidney_disease_app <- function() {
                p("This Shiny app is designed to explore data related to kidney disease, 
                analyzing key risk factors such as hypertension, diabetes, BMI, and smoking status."),
                p("The app provides insights through visualizations and statistical tests 
-               to understand potential relationships between these factors and kidney disease."),
+               to understand potential relationships between these factors and kidney disease. This extends to provide insight into cardiorenal syndrome"),
                h3("Key Objectives:"),
                tags$ul(
                  tags$li("Identify potential confounders like hypertension and diabetes."),
                  tags$li("Visualize relationships between Serum Creatinine and key risk factors."),
                  tags$li("Perform statistical tests to support data analysis.")
-               )
+               ),
+               # imageOutpu t("introductionImage", width = "80%", height = "auto")
       ),
       
       # Dataset 1 Analysis Panel
@@ -399,20 +410,35 @@ run_kidney_disease_app <- function() {
                         )
                  ),
                  column(10,
-                        plotlyOutput("explore_relationship_graph")
+                        plotlyOutput("explore_relationship_graph"),
+                        p(""),
+                        p(
+                          "Figiure 1. Density plots of serum creatinine levels (mg/dL) stratified by health conditions. 
+                          Each facet represents a specific condition, with distributions coloured by condition status."
+                        ),
+                        p(
+                          "The x-axis is log-transformed for better visualisation of clinical values."
+                        )
                  )
                ),
                h3("Identifying Confounders"),
                fluidRow(
                  column(6, 
-                        p("This section explores potential confounders such as hypertension and diabetes, and their relationship with coronary artery disease.")
+                        p("This section explores potential confounders such as hypertension and diabetes, and their relationship with coronary artery disease."),
+                        p(
+                          "Table 1. Chi-Square Test Results for Associations Between Health Conditions."
+                        ),
+                        p(
+                          "The table includes the chi-square statistic, degrees of freedom, and p-value for the relationships between 
+                          (1) hypertension and coronary artery disease and (2) diabetes mellitus and coronary artery disease"
+                        ),
                  ),
                  column(3, 
-                        h4("Hypertension vs Coronary Artery Disease"),
+                        h4("(1) Hypertension vs Coronary Artery Disease"),
                         tableOutput("hypertension_table"),
                  ),
                  column(3, 
-                        h4("Diabetes vs Coronary Artery Disease"),
+                        h4("(2) Diabetes vs Coronary Artery Disease"),
                         tableOutput("diabetes_table")
                  )
                ),
@@ -435,8 +461,11 @@ run_kidney_disease_app <- function() {
                           ),
                           column(6, 
                                  plotlyOutput("adjusted_cofounder_graph")
-                          )
+                          ),
                  ),
+                 p("Figure 2. Association between serum creatinine levels (mg/dL) and coronary artery disease status with adjustment for potential confounders (hypertension, diabetes). 
+                   Visualization options include distribution plots (boxplot, violin) and logistic regression with corresponding statistical outputs (p-values, regression coefficients)."
+                   ),
                )
       ),
       
@@ -446,18 +475,28 @@ run_kidney_disease_app <- function() {
                fluidRow(
                  column(6, 
                         p("This section explores predictivity of Serum Creatinine against smoking and BMI, both known risk factors of CAD"),
+                        p("Table 2. Analysis of Serum Creatinine Differences Across Smoking Groups and BMI Categories"),
+                       p(
+                         "Results of statistical analyses comparing serum creatinine levels across smoking status and BMI categories. 
+                         (1) Independent samples t-test comparing smokers vs. non-smokers. 
+                         (2) One-way ANOVA comparing across BMI categories."
+                       ),
                  ),
                  column(3, 
-                        h4("Statistical Tests for Smoking and Serum Creatinine"),
+                        h4("(1) Statistical Tests for Smoking and Serum Creatinine"),
                         tableOutput("smoking_ttest_table"),
                  ),
                  column(3, 
-                        h4("Statistical Tests for BMI Categories and Serum Creatinine"),
+                        h4("(2) Statistical Tests for BMI Categories and Serum Creatinine"),
                         tableOutput("bmi_anova_table"),
                       ),
                ),
                h3("Serum Creatinine vs BMI and Smoking"),
                plotlyOutput("bmi_creatinine_smoking_plot"),
+               p(
+                 "Figure 3. Association between serum creatinine levels (mg/dL) and BMI categories, stratified by smoking status. 
+                 Boxplots display median values with interquartile ranges. Statistical comparisons between BMI categories are annotated with p-values."
+                 )
       ),
       
       tabPanel("Discussion & Conclusion",
