@@ -1,4 +1,12 @@
 # UI definition for Kidney Disease Analysis Shiny App
+library(shiny)
+library(shinythemes)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(ggpubr)
+library(plotly)
+library(rsconnect)
 
 # Define UI
 ui <- fluidPage(
@@ -9,7 +17,7 @@ ui <- fluidPage(
     
     # Introduction Panel
     tabPanel("Introduction",
-             h2("Introduction"),
+             h2(""),
              column(6,
                     h2("Introduction"),  
                     
@@ -155,71 +163,62 @@ ui <- fluidPage(
     ),
     
     tabPanel("Analysis & Conclusion",
-             h2("Analysis"),
-             
-             h3("Dataset 1 Analysis: Coronary Artery Disease & Serum Creatinine"),  
-             
-             tags$h4("Chi-Square Analysis (Table 1)"),  
-             p("The chi-square test indicates a strong relationship between hypertension and CAD (p = 0.00, Table 1 (1)),  
-                as well as diabetes and CAD (p = 0.00, Table 1 (2)).  
-                Since both hypertension and diabetes are known contributors to kidney dysfunction,  
-                this supports the link between CAD and impaired kidney function."),  
-             br(),  
-             
-             tags$h4("Boxplot Analysis (Figure 2)"),  
-             p("Boxplot analysis compares serum creatinine levels across groups:"),
-             tags$ul(
-               tags$li("When both hypertension and diabetes are present, creatinine levels significantly differ (p = 8e-08)."),  
-               tags$li("Removing hypertension (p = 0.13) or both conditions (p = 0.18) eliminates statistical significance,  
-                       indicating hypertension may be the dominant factor affecting creatinine levels."),  
-               tags$li("Removing only diabetes (p = 0.014) reduces the effect size but maintains significance,  
-                       showing diabetes also contributes to kidney dysfunction.")  
-             ),  
-             br(),  
-             
-             tags$h4("Logistic Regression Analysis (Figure 2)"),  
-             p("Logistic regression further supports the connection between CAD and serum creatinine:"),
-             tags$ul(
-               tags$li("With all factors included, higher serum creatinine is significantly associated with increased CAD risk (p = 0.0102)."),  
-               tags$li("When hypertension or diabetes are removed, the relationship between creatinine and CAD becomes non-significant,  
-                       suggesting these conditions mediate the link between kidney function and CAD.")
-             ),  
-             br(),  
-             
-             h3("Dataset 2 Analysis: BMI, Smoking & Serum Creatinine"),  
-             
-             tags$h4("T-test: Smoking & Serum Creatinine (Table 2 (1))"),  
-             p("The t-test finds no significant difference in serum creatinine levels between smokers and non-smokers (p = 0.38)."),  
-             br(),  
-             
-             tags$h4("ANOVA: BMI & Serum Creatinine (Table 2 (2))"),  
-             p("ANOVA results suggest that BMI categories may influence serum creatinine,  
-                though results are close to significance (p = 0.06)."),  
-             br(),  
-             
-             tags$h4("Boxplot & Kruskal-Wallis Test (Figure 3)"),  
-             p("Breaking down BMI groups further reveals:"),
-             tags$ul(
-               tags$li("Smoking significantly affects serum creatinine in underweight individuals (p = 0.018) and obese individuals (p = 0.043)."),  
-               tags$li("No significant differences are observed in normal-weight (p = 0.8) or overweight groups (p = 0.49)."),  
-               tags$li("This suggests that smoking's effect on kidney function may be influenced by extreme BMI levels.")  
-             ),  
-             br(),  
-             
-             h2("Conclusion"),  
-             tags$b("Key Takeaways"),  
-             tags$ul(
-               tags$li("Serum creatinine is strongly linked to CAD when hypertension and diabetes are present,  
-                       reinforcing the kidney-cardiovascular connection (Figure 2, Table 1)."),  
-               tags$li("Hypertension plays a major role in influencing serum creatinine and CAD risk,  
-                       while diabetes also contributes (Table 1)."),  
-               tags$li("Smoking alone does not significantly impact serum creatinine,  
-                       but in underweight and obese individuals, smoking may contribute to kidney dysfunction (Figure 3)."),  
-               tags$li("BMI's effect on kidney function remains uncertain but could be relevant in extreme weight groups (Table 2).")  
-             ),  
-             br(),  
-             p("These findings support the study of cardiorenal syndrome, highlighting the need for monitoring at-risk individuals  
-                for both cardiovascular and kidney-related complications.")
+             fluidRow(
+                 column(6,
+                 h3("Dataset 1: Serum Creatinine & Coronary Artery Disease (CAD)"),  
+                 
+                 tags$h4("Chi-Square Analysis (Table 1)"),  
+                 p("Chi-square tests show a significant relationship between CAD and both hypertension (p = 0.00, Table 1 (1))  
+                      and diabetes (p = 0.00, Table 1 (2)).  
+                      This suggests these conditions are potential confounders when analyzing serum creatinine in CAD patients."),  
+                 br(),  
+                 
+                 tags$h4("Boxplot Analysis (Figure 2)"),  
+                 p("Serum creatinine levels significantly differ in CAD patients (p = 8e-08).  
+                      When hypertension is removed, the significance disappears (p = 0.13),  
+                      suggesting hypertension has a major impact.  
+                      Removing diabetes maintains significance (p = 0.014),  
+                      implying diabetes plays a secondary role in kidney function changes."),  
+                 br(),  
+                 
+                 tags$h4("Logistic Regression (Figure 2)"),  
+                 p("Logistic regression shows that higher serum creatinine increases the odds of CAD (p = 0.0102).  
+                      The odds ratio is exp(0.098) = 1.10, meaning a small but significant increase in CAD risk per unit rise in creatinine.  
+                      When hypertension or diabetes are removed, the relationship loses significance (p > 0.05),  
+                      reinforcing their role in the kidney-CAD connection."),  
+                 br(),  
+                 ),
+                column(6,
+                 h3("Dataset 2: Serum Creatinine, BMI, and Smoking"),  
+                 
+                 tags$h4("T-test: Smoking & Serum Creatinine (Table 2 (1))"),  
+                 p("No significant difference in serum creatinine levels between smokers and non-smokers (p = 0.38)."),  
+                 br(),  
+                 
+                 tags$h4("ANOVA: BMI & Serum Creatinine (Table 2 (2))"),  
+                 p("ANOVA suggests BMI may influence serum creatinine (p = 0.06), but results are not statistically significant."),  
+                 br(),  
+                 
+                 tags$h4("Boxplot & Kruskal-Wallis (Figure 3)"),  
+                 p("Further breakdown by BMI groups shows:"),
+                 tags$ul(
+                   tags$li("Smoking significantly affects serum creatinine in underweight (p = 0.018) and obese individuals (p = 0.043)."),  
+                   tags$li("No significant differences in normal (p = 0.8) or overweight groups (p = 0.49).")  
+                 ),  
+                 br(),  
+                 )
+            ),
+                     h2("Conclusion"),  
+                     tags$b("Key Findings"),  
+                     tags$ul(
+                       tags$li("Serum creatinine is significantly linked to CAD, but its effect is mediated by hypertension and diabetes (Figure 2, Table 1)."),  
+                       tags$li("Hypertension is the strongest confounder, while diabetes also plays a role (Table 1)."),  
+                       tags$li("Smoking alone does not affect serum creatinine, but in extreme BMI categories, it may contribute to kidney dysfunction (Figure 3)."),  
+                       tags$li("BMI's effect on kidney function is uncertain but could be relevant in extreme weight groups (Table 2).")  
+                     ),  
+                     br(),  
+                     p("These findings align with literature on cardiorenal syndrome, highlighting the need for monitoring  
+      kidney function in CAD patients with hypertension or diabetes.")
     )
   )
 )

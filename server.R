@@ -1,4 +1,12 @@
 # Server logic and helper functions for Kidney Disease Analysis Shiny App
+library(shiny)
+library(shinythemes)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(ggpubr)
+library(plotly)
+library(rsconnect)
 
 # --------------------------------------------
 # Data Loading and Cleaning Functions
@@ -6,8 +14,8 @@
 
 load_and_clean_data <- function() {
   # Import data
-  data1 <- read.csv("data/kidney_disease.csv")
-  data2 <- read.csv("data/Chronic_Kidney_Disease.csv")
+  data1 <- read.csv("www/data/kidney_disease.csv")
+  data2 <- read.csv("www/data/Chronic_Kidney_Disease.csv")
   
   # Data cleaning and preparation for data1
   colnames(data1) <- c('id', 'age', 'blood_pressure', 'specific_gravity', 'albumin', 'sugar', 'red_blood_cells', 'pus_cell',
@@ -96,11 +104,15 @@ create_original_graph <- function(data1, plot_type = "box") {
         x = "Serum Creatinine (mg/dL)",
         y = "Probability of Coronary Artery Disease"
       ) +
-      # Annotate the p-value manually
-      annotate("text", x = 20, y = 3.5, label = paste("p =", format(p_value, digits = 3)), color = "black", size = 5) +
-      # Optionally add the regression equation manually
-      annotate("text", x = 20, y = 4, label = paste("y =", round(coef(logit_model)[1], 3), 
-                                                    "+", round(coef(logit_model)[2], 3), "x"), color = "black", size = 5) +
+      # Adjust y-values to be within 0-1 range
+      annotate("text", x = max(data1$serum_creatinine) * 0.8, y = 0.8, 
+               label = paste("p =", format(p_value, digits = 3)), 
+               color = "black", size = 5) +
+      annotate("text", x = max(data1$serum_creatinine) * 0.8, y = 0.9, 
+               label = paste("y =", round(coef(logit_model)[1], 3), 
+                             "+", round(coef(logit_model)[2], 3), "x"), 
+               color = "black", size = 5) +
+      coord_cartesian(clip = "off") +
       theme_minimal() +
       theme(legend.position = "none")
     
@@ -175,11 +187,15 @@ create_adjusted_graph <- function(data1, remove_hypertension = FALSE, remove_dia
         x = "Adjusted Serum Creatinine (mg/dL)",
         y = "Probability of Coronary Artery Disease"
       ) +
-      # Annotate the p-value manually
-      annotate("text", x = 20, y = 3.5, label = paste("p =", format(p_value, digits = 3)), color = "black", size = 5) +
-      # Optionally add the regression equation manually
-      annotate("text", x = 20, y = 4, label = paste("y =", round(coef(logit_model)[1], 3), 
-                                                    "+", round(coef(logit_model)[2], 3), "x"), color = "black", size = 5) +
+      # Adjust y-values to be within 0-1 range
+      annotate("text", x = max(data1$serum_creatinine) * 0.8, y = 0.8, 
+               label = paste("p =", format(p_value, digits = 3)), 
+               color = "black", size = 5) +
+      annotate("text", x = max(data1$serum_creatinine) * 0.8, y = 0.9, 
+               label = paste("y =", round(coef(logit_model)[1], 3), 
+                             "+", round(coef(logit_model)[2], 3), "x"), 
+               color = "black", size = 5) +
+      coord_cartesian(clip = "off") +
       theme_minimal() +
       theme(legend.position = "none") 
     

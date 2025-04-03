@@ -11,9 +11,8 @@ library(ggpubr)
 library(plotly)
 library(rsconnect)
 
-# Load helper functions
-source("server.R")
 source("ui.R")
-
+source("server.R")
+  
 # Run the application
 shinyApp(ui = ui, server = server)
