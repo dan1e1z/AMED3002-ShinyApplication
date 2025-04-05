@@ -47,15 +47,37 @@ library(car)
   data2$Smoking_Status <- factor(data2$Smoking, levels = c(0, 1), labels = c("Non-Smoker", "Smoker"))
 ```
 
-check Normality
+# Test Chi-Square Assumptions
+
 ```{r}
+table_data_1 <- table(data1$coronary_artery_disease_numerical, data1$hypertension_numerical)
+table_data_2 <- table(data1$coronary_artery_disease_numerical, data1$diabetes_mellitus_numerical)
+chi_result_1 <- chisq.test(table_data_1)
+chi_result_2 <- chisq.test(table_data_2)
+```
+
+## Normality - Do not think this is needed
+```{r}
+# check Normality
 shapiro.test(data1$coronary_artery_disease_numerical)
 shapiro.test(data1$hypertension_numerical)
 shapiro.test(data1$diabetes_mellitus_numerical)
+```
 
+## Homogeneity of Variancey - Do not think this is needed
+```{r}
+leveneTest(data1$serum_creatinine, data1$coronary_artery_disease)
+```
+
+## Expected > 5
+```{r}
+chi_result_1$expected > 5
+chi_result_2$expected > 5
 ```
 
 ```{r}
-leveneTest(data1$serum_creatinine, data1$coronary_artery_disease)
+str(data1)
+dim(data1)
+dim(data2)
 ```
 
